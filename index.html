@@ -1,1 +1,1225 @@
-
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>CyberPass - Генератор паролей</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            margin: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: #0a0a1a;
+            font-family: 'Arial', sans-serif;
+            color: #0ff;
+            min-height: 100vh;
+        }
+        
+        /* 3D Сцена на заднем плане */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        /* Основной контент с прокруткой */
+        .content {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            padding: 5px 0 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        
+        /* Контейнер UI */
+        #ui {
+            width: 94%;
+            max-width: 380px;
+            background: rgba(10, 10, 30, 0.85);
+            backdrop-filter: blur(15px);
+            border: 2px solid #0ff;
+            border-radius: 24px;
+            padding: 12px 12px 16px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            margin: 5px auto;
+        }
+        
+        /* Заголовок */
+        .title {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: transparent;
+            -webkit-text-stroke: 1.5px #0ff;
+            text-shadow: 0 0 15px #0ff, 0 0 30px #00f;
+            margin-bottom: 8px;
+        }
+        
+        /* Поле с паролем */
+        .password-container {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #0ff;
+            border-radius: 40px;
+            padding: 2px 2px 2px 15px;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        #password {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #0ff;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            padding: 8px 0;
+            outline: none;
+            text-shadow: 0 0 8px #0ff;
+            width: 100%;
+        }
+        
+        .copy-btn {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #0ff, #00aaff);
+            border: none;
+            border-radius: 50%;
+            color: #0a0a1a;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            box-shadow: 0 0 15px #0ff;
+        }
+        
+        /* Настройки */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin: 8px 0;
+        }
+        
+        .setting-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1.5px solid #0ff;
+            border-radius: 20px;
+            padding: 8px 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .setting-card.active {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 20px #0ff;
+        }
+        
+        .setting-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+            filter: drop-shadow(0 0 8px #0ff);
+        }
+        
+        .setting-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .setting-desc {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        /* Ползунок длины */
+        .length-container {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1.5px solid #0ff;
+            border-radius: 20px;
+            padding: 10px 12px;
+            margin: 8px 0;
+        }
+        
+        .length-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .length-title {
+            font-size: 14px;
+            color: white;
+        }
+        
+        .length-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 15px #0ff;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #0ff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px #0ff;
+            border: 2px solid white;
+        }
+        
+        /* Индикатор сложности */
+        .strength-meter {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1.5px solid #0ff;
+            border-radius: 20px;
+            padding: 10px 12px;
+            margin: 8px 0;
+        }
+        
+        .strength-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .strength-text {
+            font-size: 14px;
+            color: white;
+        }
+        
+        .strength-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .strength-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        /* Кнопка генерации */
+        .generate-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #0ff, #00aaff, #0066ff);
+            border: none;
+            border-radius: 40px;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            box-shadow: 0 0 30px #0ff;
+        }
+        
+        /* Панель инструментов */
+        .toolbar {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin: 8px 0;
+        }
+        
+        .tool-btn {
+            padding: 8px 5px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1.5px solid #0ff;
+            border-radius: 20px;
+            color: #0ff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+        
+        /* История паролей */
+        .history-container {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1.5px solid #0ff;
+            border-radius: 20px;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        
+        .history-title {
+            font-size: 14px;
+            color: white;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .clear-history {
+            background: none;
+            border: 1.5px solid #f00;
+            color: #f00;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        
+        .clear-history:active {
+            background: #f00;
+            color: white;
+            transform: scale(0.95);
+        }
+        
+        .history-list {
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #0ff;
+            border-radius: 12px;
+            padding: 5px 10px;
+            margin: 3px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #0ff;
+            cursor: pointer;
+        }
+        
+        .history-item .date {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 9px;
+        }
+        
+        /* Уведомления */
+        #notification {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 255, 255, 0.9);
+            color: #0a0a1a;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 3000;
+            transform: translateX(400px);
+            transition: 0.3s;
+            box-shadow: 0 0 20px #0ff;
+        }
+        
+        #notification.show {
+            transform: translateX(0);
+        }
+        
+        /* ===== ПОЛНОЭКРАННЫЕ МОДАЛЬНЫЕ ОКНА С ПРОКРУТКОЙ ===== */
+        #stats-modal,
+        #check-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(15px);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-y: auto;  /* скролл всего окна */
+            padding: 20px 15px 30px;
+        }
+        
+        /* Контейнер контента - тоже с прокруткой если нужно */
+        .stats-content,
+        .check-content {
+            background: #0a0a1a;
+            border: 2px solid #0ff;
+            border-radius: 30px;
+            padding: 25px 20px;
+            max-width: 400px;
+            width: 100%;
+            color: white;
+            box-shadow: 0 0 80px #0ff;
+            margin: auto 0;     /* центрирование по вертикали */
+            position: relative;
+            max-height: none;    /* убираем ограничение */
+            overflow: visible;   /* прокрутка на уровне родителя */
+        }
+        
+        /* Стили для красивого скролла всего окна */
+        #stats-modal::-webkit-scrollbar,
+        #check-modal::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        #stats-modal::-webkit-scrollbar-track,
+        #check-modal::-webkit-scrollbar-track {
+            background: #1a1a2a;
+        }
+        
+        #stats-modal::-webkit-scrollbar-thumb,
+        #check-modal::-webkit-scrollbar-thumb {
+            background: #0ff;
+            border-radius: 10px;
+        }
+        
+        .stats-title,
+        .check-title {
+            font-size: 28px;
+            color: #0ff;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #0ff;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 5px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            font-size: 16px;
+        }
+        
+        .stat-label {
+            color: #0ff;
+        }
+        
+        .stat-value {
+            color: white;
+            font-weight: bold;
+        }
+        
+        .check-item {
+            padding: 12px 5px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            font-size: 15px;
+        }
+        
+        .check-item.good { color: #0f0; }
+        .check-item.bad { color: #f00; }
+        .check-item.warning { color: #ff0; }
+        
+        /* Кнопка закрытия - всегда видна */
+        .close-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #f00, #a00);
+            border: none;
+            border-radius: 40px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 25px;
+            border: 1px solid #ff0;
+            box-shadow: 0 0 20px #f00;
+            transition: 0.2s;
+        }
+        
+        .close-btn:active {
+            transform: scale(0.97);
+        }
+        
+        /* Индикатор прокрутки (подсказка) */
+        .scroll-hint {
+            text-align: center;
+            color: rgba(0, 255, 255, 0.5);
+            font-size: 12px;
+            margin-top: 10px;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(5px); }
+        }
+        
+        /* Частицы */
+        .particle {
+            position: fixed;
+            width: 3px;
+            height: 3px;
+            background: #0ff;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+            animation: floatParticle 2.5s linear forwards;
+        }
+        
+        @keyframes floatParticle {
+            0% { transform: translateY(0) translateX(0); opacity: 1; }
+            100% { transform: translateY(-80px) translateX(40px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="content">
+        <div id="ui">
+            <div class="title">CYBERPASS</div>
+            
+            <!-- Поле пароля -->
+            <div class="password-container">
+                <input type="text" id="password" placeholder="Нажми ГЕНЕРИРОВАТЬ" readonly>
+                <button class="copy-btn" onclick="copyPassword()" id="copyBtn">📋</button>
+            </div>
+            
+            <!-- Настройки символов -->
+            <div class="settings-grid">
+                <div class="setting-card active" id="setting-uppercase" onclick="toggleSetting('uppercase')">
+                    <div class="setting-icon">🔤</div>
+                    <div class="setting-label">A-Z</div>
+                    <div class="setting-desc">Заглавные</div>
+                </div>
+                <div class="setting-card active" id="setting-lowercase" onclick="toggleSetting('lowercase')">
+                    <div class="setting-icon">🔡</div>
+                    <div class="setting-label">a-z</div>
+                    <div class="setting-desc">Строчные</div>
+                </div>
+                <div class="setting-card active" id="setting-numbers" onclick="toggleSetting('numbers')">
+                    <div class="setting-icon">🔢</div>
+                    <div class="setting-label">0-9</div>
+                    <div class="setting-desc">Цифры</div>
+                </div>
+                <div class="setting-card" id="setting-symbols" onclick="toggleSetting('symbols')">
+                    <div class="setting-icon">⚡</div>
+                    <div class="setting-label">!@#$%</div>
+                    <div class="setting-desc">Спецсимволы</div>
+                </div>
+            </div>
+            
+            <!-- Длина пароля -->
+            <div class="length-container">
+                <div class="length-header">
+                    <span class="length-title">ДЛИНА</span>
+                    <span class="length-value" id="length-value">16</span>
+                </div>
+                <input type="range" class="slider" id="length-slider" min="4" max="64" value="16" step="1">
+            </div>
+            
+            <!-- Индикатор сложности -->
+            <div class="strength-meter">
+                <div class="strength-label">
+                    <span class="strength-text">НАДЁЖНОСТЬ</span>
+                    <span class="strength-value" id="strength-text">СЛАБЫЙ</span>
+                </div>
+                <div class="strength-bar">
+                    <div class="strength-fill" id="strength-bar" style="width: 25%; background: linear-gradient(90deg, #f00, #ff0);"></div>
+                </div>
+            </div>
+            
+            <!-- Кнопка генерации -->
+            <button class="generate-btn" onclick="generatePassword()" id="generateBtn">
+                ⚡ ГЕНЕРИРОВАТЬ ⚡
+            </button>
+            
+            <!-- Панель инструментов -->
+            <div class="toolbar">
+                <button class="tool-btn" onclick="evaluatePassword()" id="checkBtn">
+                    <span>🔍</span> ПРОВЕРКА
+                </button>
+                <button class="tool-btn" onclick="showPasswordStats()" id="statsBtn">
+                    <span>📊</span> СТАТИСТИКА
+                </button>
+                <button class="tool-btn" onclick="exportPasswords()" id="exportBtn">
+                    <span>💾</span> ЭКСПОРТ
+                </button>
+                <button class="tool-btn" onclick="generateSecurePassword()" id="secureBtn">
+                    <span>🛡️</span> СУПЕР
+                </button>
+            </div>
+            
+            <!-- История паролей -->
+            <div class="history-container">
+                <div class="history-title">
+                    <span>📜 ИСТОРИЯ</span>
+                    <button class="clear-history" onclick="clearHistory()" id="clearHistoryBtn">ОЧИСТИТЬ</button>
+                </div>
+                <div class="history-list" id="history-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="notification">Скопировано!</div>
+    
+    <!-- Модальное окно статистики -->
+    <div id="stats-modal" onclick="closeOnBackdropClick(event)">
+        <div class="stats-content">
+            <div class="stats-title">📊 СТАТИСТИКА</div>
+            <div class="stat-item"><span class="stat-label">Длина:</span><span class="stat-value" id="stat-length">0</span></div>
+            <div class="stat-item"><span class="stat-label">Заглавные:</span><span class="stat-value" id="stat-upper">0</span></div>
+            <div class="stat-item"><span class="stat-label">Строчные:</span><span class="stat-value" id="stat-lower">0</span></div>
+            <div class="stat-item"><span class="stat-label">Цифры:</span><span class="stat-value" id="stat-numbers">0</span></div>
+            <div class="stat-item"><span class="stat-label">Спецсимволы:</span><span class="stat-value" id="stat-symbols">0</span></div>
+            <div class="stat-item"><span class="stat-label">Уникальные:</span><span class="stat-value" id="stat-unique">0</span></div>
+            <div class="stat-item"><span class="stat-label">Энтропия:</span><span class="stat-value" id="stat-entropy">0 бит</span></div>
+            <div class="scroll-hint">👆 Листайте вниз</div>
+            <button class="close-btn" onclick="closeStats()">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+    
+    <!-- Модальное окно проверки -->
+    <div id="check-modal" onclick="closeOnBackdropClick(event)">
+        <div class="check-content">
+            <div class="check-title">🔍 ПРОВЕРКА</div>
+            <div id="check-results"></div>
+            <div class="scroll-hint">👆 Листайте вниз</div>
+            <button class="close-btn" onclick="closeCheck()">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ========== ЗВУКИ ==========
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+        let soundEnabled = true;
+        
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                audioCtx.resume();
+                const now = audioCtx.currentTime;
+                if (type === 'generate') {
+                    const osc1 = audioCtx.createOscillator();
+                    const osc2 = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(800, now);
+                    osc1.frequency.exponentialRampToValueAtTime(1600, now + 0.1);
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(400, now);
+                    osc2.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc1.start();
+                    osc2.start();
+                    osc1.stop(now + 0.2);
+                    osc2.stop(now + 0.2);
+                } else if (type === 'copy') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1200, now);
+                    osc.frequency.exponentialRampToValueAtTime(2400, now + 0.05);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(now + 0.1);
+                } else if (type === 'click') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = 600;
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(now + 0.05);
+                } else if (type === 'success') {
+                    const osc1 = audioCtx.createOscillator();
+                    const osc2 = audioCtx.createOscillator();
+                    const osc3 = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(600, now);
+                    osc1.frequency.setValueAtTime(800, now + 0.1);
+                    osc1.frequency.setValueAtTime(1000, now + 0.2);
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(300, now);
+                    osc2.frequency.setValueAtTime(400, now + 0.1);
+                    osc2.frequency.setValueAtTime(500, now + 0.2);
+                    osc3.type = 'sawtooth';
+                    osc3.frequency.setValueAtTime(1200, now);
+                    osc3.frequency.setValueAtTime(1600, now + 0.1);
+                    osc3.frequency.setValueAtTime(2000, now + 0.2);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.linearRampToValueAtTime(0.15, now + 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    osc3.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc1.start();
+                    osc2.start();
+                    osc3.start();
+                    osc1.stop(now + 0.3);
+                    osc2.stop(now + 0.3);
+                    osc3.stop(now + 0.3);
+                }
+            } catch(e) {}
+        }
+        
+        // ========== 3D СЦЕНА ==========
+        let scene, camera, renderer, cubes = [];
+        
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a1a);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+            
+            const light1 = new THREE.PointLight(0x00ffff, 1, 50);
+            light1.position.set(10, 10, 10);
+            scene.add(light1);
+            const light2 = new THREE.PointLight(0x0000ff, 1, 50);
+            light2.position.set(-10, -10, 10);
+            scene.add(light2);
+            
+            for (let i = 0; i < 20; i++) {
+                const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: Math.random() * 0xffffff,
+                    emissive: 0x00aaff,
+                    emissiveIntensity: 0.2,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.x = (Math.random() - 0.5) * 40;
+                cube.position.y = (Math.random() - 0.5) * 40;
+                cube.position.z = (Math.random() - 0.5) * 20 - 20;
+                cube.rotation.x = Math.random() * Math.PI;
+                cube.rotation.y = Math.random() * Math.PI;
+                cube.userData = {
+                    speed: 0.01 + Math.random() * 0.02,
+                    rotSpeed: Math.random() * 0.02
+                };
+                scene.add(cube);
+                cubes.push(cube);
+            }
+            
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsCount = 1000;
+            const starsPositions = new Float32Array(starsCount * 3);
+            for (let i = 0; i < starsCount * 3; i += 3) {
+                starsPositions[i] = (Math.random() - 0.5) * 200;
+                starsPositions[i+1] = (Math.random() - 0.5) * 200;
+                starsPositions[i+2] = (Math.random() - 0.5) * 200;
+            }
+            starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
+            const starsMaterial = new THREE.PointsMaterial({ color: 0x00aaff, size: 0.15 });
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+        }
+        
+        // ========== ГЕНЕРАЦИЯ ПАРОЛЕЙ ==========
+        let settings = {
+            uppercase: true,
+            lowercase: true,
+            numbers: true,
+            symbols: false
+        };
+        
+        let passwordLength = 16;
+        let passwordHistory = [];
+        
+        function loadHistory() {
+            const saved = localStorage.getItem('cyberpass_history');
+            if (saved) {
+                try {
+                    passwordHistory = JSON.parse(saved);
+                } catch(e) {
+                    passwordHistory = [];
+                }
+            } else {
+                passwordHistory = [];
+            }
+            updateHistoryUI();
+        }
+        
+        function saveHistory() {
+            try {
+                localStorage.setItem('cyberpass_history', JSON.stringify(passwordHistory));
+            } catch(e) {}
+        }
+        
+        window.toggleSetting = function(setting) {
+            playSound('click');
+            settings[setting] = !settings[setting];
+            const element = document.getElementById(`setting-${setting}`);
+            if (settings[setting]) {
+                element.classList.add('active');
+            } else {
+                element.classList.remove('active');
+            }
+            const anyEnabled = settings.uppercase || settings.lowercase || settings.numbers || settings.symbols;
+            if (!anyEnabled) {
+                settings.uppercase = true;
+                document.getElementById('setting-uppercase').classList.add('active');
+            }
+        };
+        
+        document.getElementById('length-slider').addEventListener('input', (e) => {
+            passwordLength = parseInt(e.target.value);
+            document.getElementById('length-value').textContent = passwordLength;
+        });
+        
+        document.getElementById('length-slider').addEventListener('change', () => {
+            playSound('click');
+            generatePassword();
+        });
+        
+        window.generatePassword = function() {
+            playSound('generate');
+            let chars = '';
+            let password = '';
+            if (settings.uppercase) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            if (settings.lowercase) chars += 'abcdefghijklmnopqrstuvwxyz';
+            if (settings.numbers) chars += '0123456789';
+            if (settings.symbols) chars += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            if (chars.length === 0) {
+                chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            }
+            for (let i = 0; i < passwordLength; i++) {
+                const randomIndex = Math.floor(Math.random() * chars.length);
+                password += chars[randomIndex];
+            }
+            document.getElementById('password').value = password;
+            evaluateStrength(password);
+            addToHistory(password);
+            createParticles();
+        };
+        
+        window.generateSecurePassword = function() {
+            playSound('success');
+            settings.uppercase = true;
+            settings.lowercase = true;
+            settings.numbers = true;
+            settings.symbols = true;
+            document.getElementById('setting-uppercase').classList.add('active');
+            document.getElementById('setting-lowercase').classList.add('active');
+            document.getElementById('setting-numbers').classList.add('active');
+            document.getElementById('setting-symbols').classList.add('active');
+            passwordLength = 24;
+            document.getElementById('length-slider').value = 24;
+            document.getElementById('length-value').textContent = 24;
+            generatePassword();
+        };
+        
+        function evaluateStrength(password) {
+            let score = 0;
+            if (password.length >= 8) score += 20;
+            if (password.length >= 12) score += 15;
+            if (password.length >= 16) score += 15;
+            if (password.length >= 24) score += 10;
+            if (/[A-Z]/.test(password)) score += 10;
+            if (/[a-z]/.test(password)) score += 10;
+            if (/[0-9]/.test(password)) score += 10;
+            if (/[^A-Za-z0-9]/.test(password)) score += 15;
+            const uniqueChars = new Set(password).size;
+            if (uniqueChars > password.length * 0.7) score += 20;
+            if (uniqueChars > password.length * 0.8) score += 10;
+            score = Math.min(100, score);
+            const bar = document.getElementById('strength-bar');
+            const text = document.getElementById('strength-text');
+            bar.style.width = score + '%';
+            if (score < 40) {
+                bar.style.background = 'linear-gradient(90deg, #f00, #ff0)';
+                text.textContent = 'СЛАБЫЙ';
+                text.style.color = '#f00';
+            } else if (score < 70) {
+                bar.style.background = 'linear-gradient(90deg, #ff0, #0f0)';
+                text.textContent = 'СРЕДНИЙ';
+                text.style.color = '#ff0';
+            } else {
+                bar.style.background = 'linear-gradient(90deg, #0f0, #0ff)';
+                text.textContent = 'НАДЁЖНЫЙ';
+                text.style.color = '#0f0';
+            }
+        }
+        
+        window.copyPassword = function() {
+            const password = document.getElementById('password').value;
+            if (!password) {
+                showNotification('❌ Сначала сгенерируйте пароль');
+                return;
+            }
+            const textarea = document.createElement('textarea');
+            textarea.value = password;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                playSound('copy');
+                showNotification('✅ Пароль скопирован!');
+                const btn = document.getElementById('copyBtn');
+                btn.style.transform = 'scale(1.2)';
+                btn.style.background = 'linear-gradient(135deg, #0f0, #0a0)';
+                setTimeout(() => {
+                    btn.style.transform = 'scale(1)';
+                    btn.style.background = 'linear-gradient(135deg, #0ff, #00aaff)';
+                }, 200);
+            } catch (err) {
+                showNotification('❌ Ошибка копирования');
+            }
+            document.body.removeChild(textarea);
+        };
+        
+        window.evaluatePassword = function() {
+            const password = document.getElementById('password').value;
+            if (!password) {
+                showNotification('❌ Сначала сгенерируйте пароль');
+                return;
+            }
+            playSound('click');
+            
+            let results = [];
+            let goodCount = 0;
+            let totalChecks = 0;
+            
+            totalChecks++;
+            if (password.length >= 8) {
+                results.push('✅ Длина: ' + password.length + ' (хорошо)');
+                goodCount++;
+            } else if (password.length >= 6) {
+                results.push('⚠️ Длина: ' + password.length + ' (мин. 8)');
+            } else {
+                results.push('❌ Длина: ' + password.length + ' (короткий)');
+            }
+            
+            totalChecks++;
+            if (/[A-Z]/.test(password)) {
+                results.push('✅ Заглавные буквы: есть');
+                goodCount++;
+            } else {
+                results.push('❌ Заглавные буквы: нет');
+            }
+            
+            totalChecks++;
+            if (/[a-z]/.test(password)) {
+                results.push('✅ Строчные буквы: есть');
+                goodCount++;
+            } else {
+                results.push('❌ Строчные буквы: нет');
+            }
+            
+            totalChecks++;
+            if (/[0-9]/.test(password)) {
+                results.push('✅ Цифры: есть');
+                goodCount++;
+            } else {
+                results.push('❌ Цифры: нет');
+            }
+            
+            totalChecks++;
+            if (/[^A-Za-z0-9]/.test(password)) {
+                results.push('✅ Спецсимволы: есть');
+                goodCount++;
+            } else {
+                results.push('⚠️ Спецсимволы: нет');
+            }
+            
+            totalChecks++;
+            const uniqueChars = new Set(password).size;
+            const uniquePercent = (uniqueChars / password.length * 100).toFixed(0);
+            if (uniqueChars > password.length * 0.7) {
+                results.push('✅ Уникальных: ' + uniquePercent + '%');
+                goodCount++;
+            } else if (uniqueChars > password.length * 0.5) {
+                results.push('⚠️ Уникальных: ' + uniquePercent + '%');
+            } else {
+                results.push('❌ Уникальных: ' + uniquePercent + '%');
+            }
+            
+            totalChecks++;
+            const commonWords = ['password', 'admin', 'user', '123456', 'qwerty', 'abc123'];
+            let hasCommonWord = false;
+            for (let word of commonWords) {
+                if (password.toLowerCase().includes(word)) {
+                    hasCommonWord = true;
+                    break;
+                }
+            }
+            if (!hasCommonWord) {
+                results.push('✅ Нет простых слов');
+                goodCount++;
+            } else {
+                results.push('❌ Содержит простое слово');
+            }
+            
+            const percent = (goodCount / totalChecks * 100).toFixed(0);
+            let verdict = '';
+            if (percent >= 80) {
+                verdict = '🟢 ОТЛИЧНЫЙ!';
+                playSound('success');
+            } else if (percent >= 50) {
+                verdict = '🟡 СРЕДНИЙ';
+            } else {
+                verdict = '🔴 СЛАБЫЙ';
+            }
+            
+            const resultsHtml = `
+                <div style="text-align: center; margin-bottom: 20px; font-size: 20px; color: #0ff;">${verdict}</div>
+                <div style="text-align: center; margin-bottom: 20px;">Надёжность: ${percent}%</div>
+                ${results.map(r => {
+                    if (r.startsWith('✅')) return `<div class="check-item good">${r}</div>`;
+                    if (r.startsWith('⚠️')) return `<div class="check-item warning">${r}</div>`;
+                    if (r.startsWith('❌')) return `<div class="check-item bad">${r}</div>`;
+                    return `<div class="check-item">${r}</div>`;
+                }).join('')}
+            `;
+            
+            document.getElementById('check-results').innerHTML = resultsHtml;
+            document.getElementById('check-modal').style.display = 'flex';
+        };
+        
+        window.closeCheck = function() {
+            document.getElementById('check-modal').style.display = 'none';
+        };
+        
+        window.showPasswordStats = function() {
+            const password = document.getElementById('password').value;
+            if (!password) {
+                showNotification('❌ Сначала сгенерируйте пароль');
+                return;
+            }
+            playSound('click');
+            
+            const upper = (password.match(/[A-Z]/g) || []).length;
+            const lower = (password.match(/[a-z]/g) || []).length;
+            const numbers = (password.match(/[0-9]/g) || []).length;
+            const symbols = (password.match(/[^A-Za-z0-9]/g) || []).length;
+            const unique = new Set(password).size;
+            
+            let charsetSize = 0;
+            if (upper > 0) charsetSize += 26;
+            if (lower > 0) charsetSize += 26;
+            if (numbers > 0) charsetSize += 10;
+            if (symbols > 0) charsetSize += 32;
+            const entropy = Math.log2(Math.pow(charsetSize || 1, password.length));
+            
+            document.getElementById('stat-length').textContent = password.length;
+            document.getElementById('stat-upper').textContent = upper;
+            document.getElementById('stat-lower').textContent = lower;
+            document.getElementById('stat-numbers').textContent = numbers;
+            document.getElementById('stat-symbols').textContent = symbols;
+            document.getElementById('stat-unique').textContent = unique;
+            document.getElementById('stat-entropy').textContent = entropy.toFixed(0) + ' бит';
+            
+            document.getElementById('stats-modal').style.display = 'flex';
+        };
+        
+        window.closeStats = function() {
+            document.getElementById('stats-modal').style.display = 'none';
+        };
+        
+        // Закрытие по клику на фон
+        window.closeOnBackdropClick = function(event) {
+            if (event.target === document.getElementById('stats-modal') || 
+                event.target === document.getElementById('check-modal')) {
+                closeStats();
+                closeCheck();
+            }
+        };
+        
+        function addToHistory(password) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString().slice(0,5);
+            passwordHistory.unshift({
+                password: password,
+                time: timeString,
+                length: password.length
+            });
+            if (passwordHistory.length > 15) {
+                passwordHistory.pop();
+            }
+            updateHistoryUI();
+            saveHistory();
+        }
+        
+        function updateHistoryUI() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            if (passwordHistory.length === 0) {
+                list.innerHTML = '<div style="color: rgba(255,255,255,0.3); text-align: center; padding: 10px;">История пуста</div>';
+                return;
+            }
+            passwordHistory.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.onclick = () => {
+                    document.getElementById('password').value = item.password;
+                    evaluateStrength(item.password);
+                    playSound('click');
+                };
+                div.innerHTML = `
+                    <span>${item.password.substring(0, 10)}${item.password.length > 10 ? '..' : ''}</span>
+                    <span class="date">${item.time}</span>
+                `;
+                list.appendChild(div);
+            });
+        }
+        
+        window.clearHistory = function() {
+            playSound('click');
+            if (confirm('⚠️ Очистить историю паролей?')) {
+                passwordHistory = [];
+                updateHistoryUI();
+                saveHistory();
+                showNotification('🗑️ История очищена');
+                
+                const btn = document.getElementById('clearHistoryBtn');
+                if (btn) {
+                    btn.style.transform = 'scale(0.9)';
+                    btn.style.background = '#f00';
+                    btn.style.color = 'white';
+                    btn.style.border = '2px solid #f00';
+                    setTimeout(() => {
+                        btn.style.transform = 'scale(1)';
+                        btn.style.background = 'none';
+                        btn.style.color = '#f00';
+                        btn.style.border = '1.5px solid #f00';
+                    }, 200);
+                }
+            }
+        };
+        
+        window.exportPasswords = function() {
+            if (passwordHistory.length === 0) {
+                showNotification('❌ История пуста');
+                return;
+            }
+            playSound('success');
+            const data = JSON.stringify(passwordHistory, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cyberpass_history.json';
+            a.click();
+            showNotification('✅ Экспортировано');
+        };
+        
+        function createParticles() {
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.background = `hsl(${Math.random() * 60 + 180}, 100%, 50%)`;
+                particle.style.animationDelay = Math.random() * 1.5 + 's';
+                document.body.appendChild(particle);
+                setTimeout(() => {
+                    particle.remove();
+                }, 2500);
+            }
+        }
+        
+        function showNotification(text) {
+            const notification = document.getElementById('notification');
+            notification.textContent = text;
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 1500);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            if (cubes.length > 0) {
+                cubes.forEach(cube => {
+                    cube.rotation.x += cube.userData.rotSpeed;
+                    cube.rotation.y += cube.userData.rotSpeed;
+                    cube.position.z += cube.userData.speed;
+                    if (cube.position.z > 20) {
+                        cube.position.z = -30;
+                    }
+                });
+            }
+            if (camera) {
+                camera.position.x = Math.sin(Date.now() * 0.0005) * 15;
+                camera.position.y = Math.cos(Date.now() * 0.0003) * 8;
+                camera.lookAt(0, 0, 0);
+            }
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+        
+        window.onload = function() {
+            init3D();
+            animate();
+            loadHistory();
+            generatePassword();
+            
+            window.addEventListener('resize', () => {
+                if (camera && renderer) {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+            });
+            
+            document.body.addEventListener('touchstart', () => {
+                audioCtx.resume();
+            }, { once: true });
+            
+            document.body.addEventListener('click', () => {
+                audioCtx.resume();
+            }, { once: true });
+        };
+    </script>
+</body>
+  </html>
